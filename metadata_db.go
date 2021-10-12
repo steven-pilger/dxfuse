@@ -1111,21 +1111,14 @@ func (mdb *MetadataDb) ReadDirAll(ctx context.Context, oph *OpHandle, dir *Dir) 
 //
 // Note: the file might not exist.
 func (mdb *MetadataDb) LookupInDir(ctx context.Context, oph *OpHandle, dir *Dir, dirOrFileName string) (Node, bool, error) {
-	if !dir.Populated {
-		mdb.ReadDirAll(ctx, oph, dir)
-	}
-
+	mdb.log("Lookupindir")
 	// point lookup in the namespace
 	sqlStmtPrep, _ := oph.txn.Prepare(`
 	SELECT obj_type,inode
 		FROM namespace
 	WHERE parent = ? AND name = ?;`)
-	defer sqlStmtPrep.Close()
-	rows, err := sqlStmtPrep.Query(dir.FullPath, dirOrFileName)
-
-	if err != nil {
-		return nil, false, oph.RecordError(err)
-	}
+	rows, _ := sqlStmtPrep.Query(dir.FullPath, dirOrFileName)
+	sqlStmtPrep.Close()
 
 	var objType int
 	var inode int64
@@ -1136,7 +1129,11 @@ func (mdb *MetadataDb) LookupInDir(ctx context.Context, oph *OpHandle, dir *Dir,
 	}
 	rows.Close()
 	if numRows == 0 {
-		return nil, false, nil
+		mdb.log("No rows!")
+		mdb.log("couldn't find you")
+		if !dir.Populated {
+			mdb.ReadDirAll(ctx, oph, dir)
+		}
 	}
 	if numRows > 1 {
 		log.Panicf("Found %d files of the form %s/%s",
@@ -1163,31 +1160,31 @@ func (mdb *MetadataDb) PopulateRoot(ctx context.Context, oph *OpHandle, manifest
 		mdb.baseDir2ProjectId[d.Dirname] = d.ProjId
 	}
 
-	dirSkel, err := manifest.DirSkeleton()
-	if err != nil {
-		mdb.log("PopulateRoot: Error creating a manifest skeleton")
-		return err
-	}
-	if mdb.options.Verbose {
-		mdb.log("dirSkeleton = %v", dirSkel)
-	}
+	// dirSkel, err := manifest.DirSkeleton()
+	// if err != nil {
+	// 	mdb.log("PopulateRoot: Error creating a manifest skeleton")
+	// 	return err
+	// }
+	// if mdb.options.Verbose {
+	// 	mdb.log("dirSkeleton = %v", dirSkel)
+	// }
 
 	// build the supporting directory structure.
 	// We mark each directory as populated, so that the platform would not
 	// be queried.
-	nowSeconds := time.Now().Unix()
-	for _, d := range dirSkel {
-		_, err := mdb.createEmptyDir(
-			oph,
-			"", "", // There is no backing project/folder
-			nowSeconds, nowSeconds,
-			dirReadOnlyMode, // skeleton directories are scaffolding, they cannot be modified.
-			d, true)
-		if err != nil {
-			mdb.log("PopulateRoot: Error creating empty dir")
-			return oph.RecordError(err)
-		}
-	}
+	//nowSeconds := time.Now().Unix()
+	// for _, d := range dirSkel {
+	// 	_, err := mdb.createEmptyDir(
+	// 		oph,
+	// 		"", "", // There is no backing project/folder
+	// 		nowSeconds, nowSeconds,
+	// 		dirReadOnlyMode, // skeleton directories are scaffolding, they cannot be modified.
+	// 		d, true)
+	// 	if err != nil {
+	// 		mdb.log("PopulateRoot: Error creating empty dir")
+	// 		return oph.RecordError(err)
+	// 	}
+	// }
 
 	// create individual files
 	mdb.log("individual manifest files (num=%d)", len(manifest.Files))

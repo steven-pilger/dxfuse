@@ -174,14 +174,29 @@ func MakeManifestFromProjectIds(
 
 	dirs := make([]ManifestDir, 0)
 	for _, pDesc := range projDescs {
-		mstDir := ManifestDir{
-			ProjId:       pDesc.Id,
-			Folder:       "/",
-			Dirname:      filepath.Clean("/" + pDesc.Name),
-			CtimeSeconds: pDesc.CtimeSeconds,
-			MtimeSeconds: pDesc.MtimeSeconds,
+		// mstDir := ManifestDir{
+		// 	ProjId:       pDesc.Id,
+		// 	Folder:       "/",
+		// 	Dirname:      filepath.Clean("/" + pDesc.Name),
+		// 	CtimeSeconds: pDesc.CtimeSeconds,
+		// 	MtimeSeconds: pDesc.MtimeSeconds,
+		// }
+		//dirs = append(dirs, mstDir)
+		log.Printf("pre-subfolder")
+		log.Printf("%v", pDesc)
+		log.Printf("%v", pDesc.Folders)
+		for _, folder := range pDesc.Folders {
+			LogMsg("Subfolder! %s", folder)
+			mstDir := ManifestDir{
+				ProjId:       pDesc.Id,
+				Folder:       folder,
+				Dirname:      filepath.Clean("/" + pDesc.Name + folder),
+				CtimeSeconds: pDesc.CtimeSeconds,
+				MtimeSeconds: pDesc.MtimeSeconds,
+			}
+			dirs = append(dirs, mstDir)
 		}
-		dirs = append(dirs, mstDir)
+
 	}
 
 	var emptyFiles []ManifestFile
@@ -252,6 +267,7 @@ func (m *Manifest) DirSkeleton() ([]string, error) {
 	// record all the directory parents, because we'll need to build them.
 	// check that a directory is not used twice.
 	allDirs := make(map[string]bool)
+	fmt.Sprintf("%v", allDirs)
 	for _, d := range m.Directories {
 		dirParent, _ := filepath.Split(d.Dirname)
 		for _, p := range ancestors(dirParent) {

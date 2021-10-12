@@ -1640,7 +1640,7 @@ func (fsys *Filesys) FlushFile(ctx context.Context, op *fuseops.FlushFileOp) err
 		return fsys.translateError(fh.writeError)
 	}
 
-	// Empty files are handled by ReleaseFileHandle
+	// Empty files are a special case handled by ReleaseFileHandle
 	if len(fh.writeBuffer) == 0 && fh.size == 0 {
 		if fsys.ops.options.VerboseLevel > 1 {
 			fsys.log("Ignoring FlushFile: file is empty")
@@ -1727,7 +1727,6 @@ func (fsys *Filesys) ReleaseFileHandle(ctx context.Context, op *fuseops.ReleaseF
 	delete(fsys.fhTable, op.Handle)
 	fsys.mutex.Unlock()
 
-	// Clear the state involved with this open file descriptor
 	switch fh.accessMode {
 	case AM_RO_Remote:
 		// Read-only file that is accessed remotely
@@ -1735,7 +1734,7 @@ func (fsys *Filesys) ReleaseFileHandle(ctx context.Context, op *fuseops.ReleaseF
 		return nil
 
 	case AM_AO_Remote:
-		// Special case for empty files which are not uploaded during FlushFile since their size is 0
+		// Special case for empty files which are not uploaded during FlushFile
 		if fh.size == 0 && len(fh.writeBuffer) == 0 && fh.lastPartId == 0 {
 			if fsys.ops.options.Verbose {
 				fsys.log("Upload and close empty %s", fh.Id)

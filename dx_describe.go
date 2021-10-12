@@ -47,6 +47,7 @@ type DxDescribePrj struct {
 	Id           string
 	Name         string
 	Region       string
+	Folders      []string
 	Version      int
 	DataUsageGiB float64
 	CtimeSeconds int64
@@ -340,6 +341,7 @@ type ReplyDescribeProject struct {
 	Id               string               `json:"id"`
 	Name             string               `json:"name"`
 	Region           string               `json:"region"`
+	Folders          []string             `json:"folders"`
 	Version          int                  `json:"version"`
 	DataUsage        float64              `json:"dataUsage"`
 	CreatedMillisec  int64                `json:"created"`
@@ -375,6 +377,7 @@ func DxDescribeProject(
 		"id":                   true,
 		"name":                 true,
 		"region":               true,
+		"folders":              true,
 		"version":              true,
 		"dataUsage":            true,
 		"created":              true,
@@ -403,6 +406,7 @@ func DxDescribeProject(
 		Id:           reply.Id,
 		Name:         reply.Name,
 		Region:       reply.Region,
+		Folders:      reply.Folders,
 		Version:      reply.Version,
 		DataUsageGiB: reply.DataUsage,
 		CtimeSeconds: reply.CreatedMillisec / 1000,
