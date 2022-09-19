@@ -6,13 +6,16 @@ package dxfuse
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"net"
 	"net/rpc"
+	"fmt"
 
 	"golang.org/x/sync/semaphore"
 )
+
+var CmdPort = GetFreePort()
+
 
 type CmdServer struct {
 	options Options
@@ -39,32 +42,37 @@ func (cmdSrv *CmdServer) log(a string, args ...interface{}) {
 	LogMsg("CmdServer", a, args...)
 }
 
-func GetFreePort() (int, error) {
+func GetFreePort() (int) {
         addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
         if err != nil {
-                return 0, err
+                return 0
         }
  
         l, err := net.ListenTCP("tcp", addr)
         if err != nil {
-                return 0, err
+                return 0
         }
         defer l.Close()
-        return l.Addr().(*net.TCPAddr).Port, nil
+        return l.Addr().(*net.TCPAddr).Port
 }
 
 func (cmdSrv *CmdServer) Init() {
-	free_port, err := GetFreePort()
-	if free_port == 0 {
+	addy, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", CmdPort))
+	if err != nil {
 		log.Fatal(err)
 	}
-	cmdSrv.inbound = free_port
+
+	inbound, err := net.ListenTCP("tcp", addy)
+	if err != nil {
+		log.Fatal(err)
+	}
+	cmdSrv.inbound = inbound
 
 	cmdSrvBox := &CmdServerBox{
 		cmdSrv: cmdSrv,
 	}
 	rpc.Register(cmdSrvBox)
-	go rpc.Accept(free_port)
+	go rpc.Accept(inbound)
 
 	cmdSrv.log("started command server, accepting external commands")
 }
