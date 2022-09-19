@@ -14,11 +14,6 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-const (
-	// A port number for accepting commands
-	CmdPort = 7205
-)
-
 type CmdServer struct {
 	options Options
 	sybx    *SyncDbDx
@@ -44,23 +39,32 @@ func (cmdSrv *CmdServer) log(a string, args ...interface{}) {
 	LogMsg("CmdServer", a, args...)
 }
 
-func (cmdSrv *CmdServer) Init() {
-	addy, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", CmdPort))
-	if err != nil {
-		log.Fatal(err)
-	}
+func GetFreePort() (int, error) {
+        addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+        if err != nil {
+                return 0, err
+        }
+ 
+        l, err := net.ListenTCP("tcp", addr)
+        if err != nil {
+                return 0, err
+        }
+        defer l.Close()
+        return l.Addr().(*net.TCPAddr).Port, nil
+}
 
-	inbound, err := net.ListenTCP("tcp", addy)
-	if err != nil {
+func (cmdSrv *CmdServer) Init() {
+	free_port, err := GetFreePort()
+	if free_port == 0 {
 		log.Fatal(err)
 	}
-	cmdSrv.inbound = inbound
+	cmdSrv.inbound = free_port
 
 	cmdSrvBox := &CmdServerBox{
 		cmdSrv: cmdSrv,
 	}
 	rpc.Register(cmdSrvBox)
-	go rpc.Accept(inbound)
+	go rpc.Accept(free_port)
 
 	cmdSrv.log("started command server, accepting external commands")
 }
