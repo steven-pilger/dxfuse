@@ -6,18 +6,16 @@ package dxfuse
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"net"
 	"net/rpc"
+	"fmt"
 
 	"golang.org/x/sync/semaphore"
 )
 
-const (
-	// A port number for accepting commands
-	CmdPort = 7205
-)
+var CmdPort = GetFreePort()
+
 
 type CmdServer struct {
 	options Options
@@ -42,6 +40,20 @@ func NewCmdServer(options Options, sybx *SyncDbDx) *CmdServer {
 // write a log message, and add a header
 func (cmdSrv *CmdServer) log(a string, args ...interface{}) {
 	LogMsg("CmdServer", a, args...)
+}
+
+func GetFreePort() (int) {
+        addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+        if err != nil {
+                return 0
+        }
+ 
+        l, err := net.ListenTCP("tcp", addr)
+        if err != nil {
+                return 0
+        }
+        defer l.Close()
+        return l.Addr().(*net.TCPAddr).Port
 }
 
 func (cmdSrv *CmdServer) Init() {
